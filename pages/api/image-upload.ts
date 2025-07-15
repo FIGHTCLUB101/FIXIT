@@ -23,6 +23,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return;
     }
     const file = Array.isArray(files.file) ? files.file[0] : files.file;
+    if (!file || !file.filepath) {
+      res.status(400).json({ error: 'No file uploaded.' });
+      return;
+    }
     const result = await cloudinary.uploader.upload(file.filepath);
     res.json({ url: result.secure_url });
   });
