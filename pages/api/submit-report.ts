@@ -3,6 +3,7 @@ import clientPromise from '@/lib/db';
 import { sendMail } from '@/lib/mailer';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // console.log('API /api/submit-report body:', req.body);
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, message: 'Method Not Allowed' });
   }
