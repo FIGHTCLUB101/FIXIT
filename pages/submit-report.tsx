@@ -2,17 +2,33 @@ import { useState } from 'react';
 import axios from 'axios';
 import Link from 'next/link';
 
-export default function SubmitReport() {
   const [message, setMessage] = useState('');
+  const [email, setEmail] = useState('');
   const [image, setImage] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [language, setLanguage] = useState('en');
+  const [category, setCategory] = useState('Hostel');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<number>(0);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        setError('Only image files are allowed.');
+        setImage(null);
+        setPreview(null);
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setError('File size must be less than 5MB.');
+        setImage(null);
+        setPreview(null);
+        return;
+      }
+    }
     setImage(file);
     setPreview(file ? URL.createObjectURL(file) : null);
   };
@@ -22,12 +38,17 @@ export default function SubmitReport() {
     setError(null);
     setSuccess(null);
 
-    if (!message || !image) {
-      setError('Please provide a description and select an image.');
+    if (!message || !image || !category || !email) {
+      setError('Please provide your email, a description, select a category, and select an image.');
+      return;
+    }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      setError('Please enter a valid email address.');
       return;
     }
 
     setLoading(true);
+    setProgress(0);
     try {
       // 1. Upload image to your /api/image-upload endpoint
       const formData = new FormData();
@@ -35,6 +56,11 @@ export default function SubmitReport() {
 
       const uploadRes = await axios.post('/api/image-upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            setProgress(Math.round((progressEvent.loaded * 100) / progressEvent.total));
+          }
+        },
       });
 
       // 2. Submit report with image URL
@@ -42,14 +68,19 @@ export default function SubmitReport() {
         message,
         image: uploadRes.data.url,
         language,
+        category,
+        email,
       });
 
-      setSuccess('Report submitted successfully!');
+      setSuccess(`Report submitted successfully! Your Report ID: ${res.data.id}`);
       setMessage('');
       setImage(null);
       setPreview(null);
+      setEmail('');
+      setProgress(0);
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Failed to submit report.');
+      setProgress(0);
     } finally {
       setLoading(false);
     }
@@ -72,6 +103,33 @@ export default function SubmitReport() {
           <h1 className="text-3xl font-bold text-purple-300 mb-6 text-center">Submit a Report</h1>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
+              <label className="block text-sm font-semibold mb-2 text-purple-200">Your Email</label>
+              <input
+                type="email"
+                className="w-full rounded-lg bg-[#232946] border border-[#2a2e4b] p-3 text-white mb-4"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="Enter your email"
+                required
+                disabled={loading}
+              />
+              <label className="block text-sm font-semibold mb-2 text-purple-200">Category</label>
+              <select
+                className="w-full rounded-lg bg-[#232946] border border-[#2a2e4b] p-3 text-white mb-4"
+                value={category}
+                onChange={e => setCategory(e.target.value)}
+                required
+              >
+                <option value="Hostel">Hostel</option>
+                <option value="Academic Block">Academic Block</option>
+                <option value="Garden">Garden</option>
+                <option value="Temple">Temple</option>
+                <option value="Road">Road</option>
+                <option value="Mess">Mess</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div>
               <label className="block text-sm font-semibold mb-2 text-purple-200">Description</label>
               <textarea
                 className="w-full rounded-lg bg-[#232946] border border-[#2a2e4b] p-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -90,10 +148,22 @@ export default function SubmitReport() {
                 className="block w-full text-white"
                 onChange={handleImageChange}
                 required
+                disabled={loading}
               />
               {preview && (
-                <div className="mt-3 flex justify-center">
+                <div className="mt-3 flex flex-col items-center">
                   <img src={preview} alt="Preview" className="w-40 h-40 object-contain rounded-lg border border-purple-500 shadow" />
+                  {loading && (
+                    <div className="w-full mt-2">
+                      <div className="h-2 bg-[#232946] rounded">
+                        <div
+                          className="h-2 bg-purple-500 rounded transition-all"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                      <div className="text-xs text-purple-300 mt-1 text-center">Uploading: {progress}%</div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
