@@ -56,13 +56,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { message, image, language, category, email, captchaToken } = req.body;
+    const { message, image, language, category, email, captchaToken, department, priority } = req.body;
+    // Department auto-routing based on category
+    const categoryDepartmentMap: Record<string, string> = {
+      Hostel: 'Maintenance',
+      'Academic Block': 'IT',
+      Garden: 'Sanitation',
+      Temple: 'Sanitation',
+      Road: 'Maintenance',
+      Mess: 'Sanitation',
+      Other: department || 'Maintenance',
+    };
+    const assignedDepartment = categoryDepartmentMap[category] || department || 'Maintenance';
 
     // Validate required fields
-    if (!message || !category || !email) {
+    if (!message || !category || !email || !department || !priority) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Message, category, and email are required.' 
+        message: 'Message, category, department, priority, and email are required.' 
       });
     }
 
@@ -88,15 +99,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const db = client.db();
 
     // Insert the report
+    // SLA: 48 hours from creation
+    const createdAt = new Date();
+    const slaDue = new Date(createdAt.getTime() + 48 * 60 * 60 * 1000);
     const { insertedId } = await db.collection('reports').insertOne({
       message,
       image: image || '',
       language: language || 'en',
       category,
+      department: assignedDepartment,
+      priority,
       email,
       status: 'Pending',
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt,
+      updatedAt: createdAt,
+      slaDue,
+      isOverdue: false,
     });
 
     // Send email notification (with error handling)
@@ -110,6 +128,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           <p>Thank you for submitting your report. We will review it and get back to you.</p>
           <p><strong>Report ID:</strong> ${insertedId}</p>
           <p><strong>Category:</strong> ${category}</p>
+          <p><strong>Department:</strong> ${department}</p>
+          <p><strong>Priority:</strong> ${priority}</p>
           <p><strong>Status:</strong> Pending</p>
           <p>You can track your report status using the Report ID above.</p>
         `

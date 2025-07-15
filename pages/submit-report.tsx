@@ -209,6 +209,10 @@ export default function SubmitReport() {
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<number>(0);
+  const [department, setDepartment] = useState('Maintenance');
+  const [priority, setPriority] = useState('Medium');
+  const departmentOptions = ['Maintenance', 'Sanitation', 'Security', 'IT'];
+  const priorityOptions = ['Low', 'Medium', 'High', 'Critical'];
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
@@ -235,8 +239,8 @@ export default function SubmitReport() {
     setError(null);
     setSuccess(null);
 
-    if (!message || !image || !category || !email) {
-      setError('Please provide your email, a description, select a category, and select an image.');
+    if (!message || !image || !category || !email || !department || !priority) {
+      setError('Please provide your email, a description, select a category, department, priority, and select an image.');
       return;
     }
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
@@ -266,6 +270,8 @@ export default function SubmitReport() {
         image: uploadRes.data.url,
         language,
         category,
+        department,
+        priority,
         email,
       });
 
@@ -275,6 +281,8 @@ export default function SubmitReport() {
       setPreview(null);
       setEmail('');
       setProgress(0);
+      setDepartment('Maintenance');
+      setPriority('Medium');
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Failed to submit report.');
       setProgress(0);
@@ -324,6 +332,34 @@ export default function SubmitReport() {
                 <option value="Road">Road</option>
                 <option value="Mess">Mess</option>
                 <option value="Other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold mb-2 text-purple-200">Department</label>
+              <select
+                className="w-full rounded-lg bg-[#232946] border border-[#2a2e4b] p-3 text-white mb-4"
+                value={department}
+                onChange={e => setDepartment(e.target.value)}
+                required
+                disabled={loading}
+              >
+                {departmentOptions.map(dep => (
+                  <option key={dep} value={dep}>{dep}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold mb-2 text-purple-200">Priority</label>
+              <select
+                className="w-full rounded-lg bg-[#232946] border border-[#2a2e4b] p-3 text-white mb-4"
+                value={priority}
+                onChange={e => setPriority(e.target.value)}
+                required
+                disabled={loading}
+              >
+                {priorityOptions.map(pri => (
+                  <option key={pri} value={pri}>{pri}</option>
+                ))}
               </select>
             </div>
             <div>

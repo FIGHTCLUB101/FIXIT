@@ -25,6 +25,7 @@
     "react-dom": "18.3.1",
     "react-google-recaptcha": "^3.1.0",
     "react-i18next": "^13.5.0",
+    "recharts": "^3.1.0",
     "twilio": "^5.7.3"
   },
   "devDependencies": {
